@@ -22,9 +22,9 @@ userSchema.methods.comparePassword=async function(pass){
 }
 userSchema.methods.genAccess= function(){
   return jwt.sign(
-    {id:this._id, role:this.role},
+    {id:this._id, role:this.role,name:this.name,email:this.email},
     process.env.ACCESS_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: "5d" }
   )
 }
 userSchema.methods.genRefresh = function () {

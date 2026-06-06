@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const connectDB = require('./config/database');
-const routes = require('./routes/index');
+const routes = require('./routes/v1/index')
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 connectDB();
 
-app.use('/api/v1/users', routes);
+app.use('/', routes);
 
 const port = process.env.PORT || 3002;
 app.listen(port, () => {

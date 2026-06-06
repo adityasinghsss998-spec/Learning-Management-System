@@ -12,8 +12,14 @@ app.use(bodyParser.urlencoded({extended:true}));
 connectDB();
 app.use(express.json());
 
-app.use("/api/v1/auth", routes);
+app.use("/", routes);
+// Add this temporary spy logger
+app.use((req, res, next) => {
+    console.log(`[AUTH SPY] Method: ${req.method} | URL: ${req.originalUrl}`);
+    next();
+});
 
+app.use("/api/v1/auth", routes);
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
   console.log("Auth Service Running");
