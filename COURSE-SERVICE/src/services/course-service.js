@@ -117,5 +117,36 @@ class CourseService{
             throw e;
         }
     }
+     async addSection(courseId, instructorId, sectionData) {
+        try {
+            const course = await this.repo.findById(courseId);
+            if (!course) throw new Error("Course not found");
+            if (!course.isOwnedBy(instructorId)) throw new Error("Unauthorized");
+            course.sections.push(sectionData);
+            await course.save();
+            return course;
+        } catch (e) {
+            console.log("Something went wrong at the service layer", e);
+            throw e;
+        }
+    }
+
+    async addLesson(courseId,sectionId,instructorId,lessonData){
+        try{
+            const course = await this.repo.findById(courseId);
+            if (!course) throw new Error("Course not found");
+            if (!course.isOwnedBy(instructorId)) throw new Error("Unauthorized");
+            const section=await this.repo.findById(sectionId);
+            if (!section) throw new Error("Section not found");
+             section.lessons.push(lessonData);
+            await course.save();
+            return course;
+        } catch (e) {
+            console.log("Something went wrong at the service layer", e);
+            throw e;
+        }
+    }
 
 }
+
+module.exports = { CourseService };
