@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 connectDB();
 
-app.use('/api/v1/courses', routes);
+app.use('/', routes);
 
 const port = process.env.PORT || 3003;
 app.listen(port, () => {

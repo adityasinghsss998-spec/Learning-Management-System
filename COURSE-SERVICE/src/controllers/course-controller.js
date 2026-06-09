@@ -82,7 +82,7 @@ const updateCourse = async (req, res) => {
 const addSection=async(req,res)=>{
   try{
     const response=await courseService.addSection(
-      req.params.courseId,
+      req.params.id,
       req.headers['x-user-id'],
       req.body
     )
@@ -101,12 +101,12 @@ const addSection=async(req,res)=>{
 }
 const addLesson=async(req,res)=>{
   try{
-      const contenturl=req.file?.location;
+      const contentUrl=req.file?.location;
       const response=await courseService.addLesson(
         req.params.courseId,
-        req.params,sectionId,
+        req.params.sectionId,
         req.headers['x-user-id'],
-        {...req.body,contenturl}
+        {...req.body,contentUrl}
       )
     return res.status(200).json({
       data:response,
@@ -114,6 +114,13 @@ const addLesson=async(req,res)=>{
       message:"lesson added successfully"
     })
   }catch(e){
+    if (req.file?.location) {
+        // Send a command to AWS S3 to instantly delete that specific file
+        await s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.S3_BUCKET,
+            Key: req.file.key // The exact AWS file path
+        }));
+    }
     res.status(400).json({
       data:{},
       message:e.message,

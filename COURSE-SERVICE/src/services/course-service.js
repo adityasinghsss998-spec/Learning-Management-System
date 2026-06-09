@@ -6,12 +6,12 @@ class CourseService{
 
   async create(instructorId,instructorName,data){
     try{
-      const data=await this.repo.create({
+      const response=await this.repo.create({
         ...data,
         instructorId,
         instructorName
       })
-      return data.toSummay();
+      return response.toSummary();
     }catch(e){
       console.log("Something went wrong at the service layer", e);
       throw e;
@@ -27,8 +27,8 @@ class CourseService{
       if(level) filter.level=level;
       if(minprice || maxprice){
         filter.price={}
-        if(maxprice) filter.price.$gte=Number(maxprice)
-        if(minprice) filter.price.$lte=Number(minprice)
+        if(maxprice) filter.price.$gte=Number(minprice)
+        if(minprice) filter.price.$lte=Number(maxprice)
       }
       const sortmap={
                 newest: { createdAt: -1 },
@@ -37,8 +37,9 @@ class CourseService{
                 price_desc: { price: -1 },
                 popular: { totalStudents: -1 },
       }
-       const sortOption = sortMap[sort] || { createdAt: -1 };
-       const course = await this.repo.findAll(filter,sortOption)
+       const sortOption = sortmap[sort] || { createdAt: -1 };
+       const courses = await this.repo.findAll(filter,sortOption);
+       return courses.map((c) => c.toSummary());
     }catch(e){
       console.log("Something went wrong at the service layer", e);
       throw e;
@@ -136,7 +137,9 @@ class CourseService{
             const course = await this.repo.findById(courseId);
             if (!course) throw new Error("Course not found");
             if (!course.isOwnedBy(instructorId)) throw new Error("Unauthorized");
-            const section=await this.repo.findById(sectionId);
+            console.log("Sections in this course:", JSON.stringify(course.sections));  // add this
+            console.log("Looking for sectionId:", sectionId); 
+            const section = course.sections.id(sectionId);
             if (!section) throw new Error("Section not found");
              section.lessons.push(lessonData);
             await course.save();
