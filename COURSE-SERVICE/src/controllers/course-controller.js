@@ -1,6 +1,7 @@
 const course = require('../models/course');
 const {CourseService} =require('../services/course-service');
 const courseService=new CourseService();
+const { S3Client } = require('@aws-sdk/client-s3');
 const createCourse=async(req,res)=>{
   try{
     const userid=req.headers['x-user-id'];
@@ -114,13 +115,7 @@ const addLesson=async(req,res)=>{
       message:"lesson added successfully"
     })
   }catch(e){
-    if (req.file?.location) {
-        // Send a command to AWS S3 to instantly delete that specific file
-        await s3Client.send(new DeleteObjectCommand({
-            Bucket: process.env.S3_BUCKET,
-            Key: req.file.key // The exact AWS file path
-        }));
-    }
+    
     res.status(400).json({
       data:{},
       message:e.message,
@@ -130,7 +125,7 @@ const addLesson=async(req,res)=>{
 }
 const incrementStudents = async (req, res) => {
     try {
-        await courseService.incrementStudents(req.params.courseId);
+        await courseService.incrementStudents(req.params.id)
         res.status(200).json({ message: "Student count updated" });
     } catch (e) {
         res.status(400).json({ message: e.message });

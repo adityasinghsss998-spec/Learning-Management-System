@@ -4,7 +4,7 @@ const { courseClient } = require('../config/axios');
 const razorpay = require('../config/razorpay');
 const dotenv = require('dotenv');
 let channel;
-
+const amqp = require('amqplib');
 const getRabbitChannel = async () => {
     if (channel) return channel;
     const conn = await amqp.connect(process.env.RABBITMQ_URL);
@@ -111,10 +111,12 @@ class EnrollmentService{
         try {
             const existing = await this.repo.findOne(studentId, courseId);
             if (existing) throw new Error("Already enrolled in this course");
-
-            const { data: course } = await courseClient.get(
-                `/api/v1/courses/${courseId}`
+            console.log("🕵️ AXIOS IS GOING TO:", courseClient.defaults.baseURL + `/api/v1/courses/${courseId}`)
+            const { data: coursedata } = await courseClient.get(
+                `${courseId}`
             );
+            const course=coursedata.data;
+            console.log(course)
             if (!course) throw new Error("Course not found");
             if (course.price !== 0) throw new Error("This is a paid course");
 
@@ -133,7 +135,7 @@ class EnrollmentService{
                 payment: { status: "free", amount: 0 },
             });
 
-            await courseClient.patch(`/api/v1/courses/${courseId}/students/increment`);
+            await courseClient.patch(`${courseId}/students/increment`);
 
             await publish("enrollment.created", {
                 studentId,

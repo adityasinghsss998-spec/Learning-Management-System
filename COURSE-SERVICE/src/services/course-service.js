@@ -149,6 +149,18 @@ class CourseService{
             throw e;
         }
     }
+    // Paste this inside class CourseService { ... } in your course-service.js file
+
+async incrementStudents(courseId) {
+    try {
+        const course = await this.repo.incrementStudents(courseId)
+        if (!course) throw new Error("Course not found");
+        return course;
+    } catch (e) {
+        console.log("Something went wrong at the service layer", e);
+        throw e;
+    }
+}
 
 }
 

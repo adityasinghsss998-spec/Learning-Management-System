@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const controller = require('../../controllers/enrollment-controller');
-
+console.log("Reached")
 router.post('/checkout', controller.checkout);
 router.post('/verify-payment', controller.verifyAndEnroll);
 router.post('/free', controller.enrollFree);
