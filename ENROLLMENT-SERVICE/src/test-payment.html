@@ -9,10 +9,9 @@
         // 👇 PASTE YOUR POSTMAN DATA HERE
         var options = {
             "key": "rzp_test_Szu5hDUf3EMm7W", 
-            "order_id": "order_YOUR_ORDER_ID_HERE",
+            "order_id": "order_T1SzJNFL91NFNw",
             "name": "Test Course",
             "handler": function (response){
-                // This prints the secret data so we can copy it into Postman!
                 console.log("PAYMENT ID: ", response.razorpay_payment_id);
                 console.log("SIGNATURE: ", response.razorpay_signature);
                 document.body.innerHTML += "<h2>Success! Open DevTools Console (F12) to copy your Signature!</h2>";

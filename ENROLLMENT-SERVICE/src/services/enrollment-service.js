@@ -66,16 +66,18 @@ class EnrollmentService{
 
     async verifyAndEnroll(studentId, courseId, orderId, paymentId, signature) {
       try{
-          const body = orderId + "|" + paymentId;
+          const body = orderId+"|"+paymentId;
           const expected = crypto
                 .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
                 .update(body)
                 .digest("hex");
+          
 
+           console.log("--- SECURITY CHECK ---");
+  
           if (expected!==signature) throw new Error("Payment verification failed");
-          const { data: course } = await courseClient.get(
-                `/api/v1/courses/${courseId}`
-            );
+          const { data: responseBody } = await courseClient.get(`/${courseId}`);
+          const course = responseBody.data;
 
             const allLessons = course.sections.flatMap((s) =>
                 s.lessons.map((l) => ({
@@ -97,7 +99,7 @@ class EnrollmentService{
                 },
             });
 
-          await courseClient.patch(`/api/v1/courses/${courseId}/students/increment`);
+          await courseClient.patch(`/${courseId}/students/increment`);
           await publish("enrollment.created", {
                 studentId,
                 courseId,
@@ -175,7 +177,7 @@ class EnrollmentService{
                 enrollment.completedAt = new Date();
 
                 const { data: course } = await courseClient.get(
-                    `/api/v1/courses/${courseId}`
+                    `/${courseId}`
                 );
 
                 await publish("certificate.generate", {
