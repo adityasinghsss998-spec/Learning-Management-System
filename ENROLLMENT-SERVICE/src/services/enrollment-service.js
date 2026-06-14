@@ -25,13 +25,13 @@ class EnrollmentService{
    
     async checkout(studentId,CourseId){
       try{
-        const student=await this.repo.findByStudent(studentId,CourseId);
-        if(existing){
+        const student=await this.repo.findOne(studentId,CourseId);
+        console.log(student)
+        if(student){
           throw new Error ("Aleady enrolled in this course")
         }
-        
-        const {data:course} = await courseClient.get('/api/v1/courses/${CourseId}')
-
+       const { data: responseBody } = await courseClient.get(`/${CourseId}`);
+        const course = responseBody.data;
         if(!course) throw new Error("course does not exist");
         if(course.price==0){
           return {
@@ -40,10 +40,14 @@ class EnrollmentService{
             price:0
           }
         }
+
+        const shortStudent = studentId.toString().slice(-8);
+        const shortCourse = CourseId.toString().slice(-8);
+
         const order=await razorpay.orders.create({
            amount: course.price * 100,
            currency: "INR",
-           receipt: `receipt_${studentId}_${courseId}`,
+           receipt: `receipt_${shortStudent}_${shortCourse}`,
         })
 
          return {

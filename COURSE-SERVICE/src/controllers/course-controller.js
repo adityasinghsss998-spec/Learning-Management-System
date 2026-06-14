@@ -141,6 +141,7 @@ const deleteCourse = async (req, res) => {
 };
 const togglePublish = async (req, res) => {
     try {
+        console.log("reached")
         const result = await courseService.togglePublish(
             req.params.id,
             req.headers['x-user-id']

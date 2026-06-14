@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>Razorpay Hacker Console</title></head>
+<body>
+    <button id="pay-btn" style="padding: 20px; font-size: 20px;">Pay Fake Money</button>
+    
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        // 👇 PASTE YOUR POSTMAN DATA HERE
+        var options = {
+            "key": "rzp_test_Szu5hDUf3EMm7W", 
+            "order_id": "order_YOUR_ORDER_ID_HERE",
+            "name": "Test Course",
+            "handler": function (response){
+                // This prints the secret data so we can copy it into Postman!
+                console.log("PAYMENT ID: ", response.razorpay_payment_id);
+                console.log("SIGNATURE: ", response.razorpay_signature);
+                document.body.innerHTML += "<h2>Success! Open DevTools Console (F12) to copy your Signature!</h2>";
+            }
+        };
+        
+        document.getElementById('pay-btn').onclick = function(e){
+            var rzp1 = new Razorpay(options);
+            rzp1.open();
+            e.preventDefault();
+        }
+    </script>
+</body>
+</html>

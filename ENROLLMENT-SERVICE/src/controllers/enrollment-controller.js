@@ -3,9 +3,10 @@ const enrollmentService = new EnrollmentService();
 
 const checkout = async (req, res) => {
     try {
+        console.log(req.body.id,"-> course id")
         const result = await enrollmentService.checkout(
             req.headers['x-user-id'],
-            req.body.courseId
+            req.body.id
         );
         res.status(200).json(result);
     } catch (e) {
