@@ -57,6 +57,7 @@ const updateProgress = async (req, res) => {
     try {
         const result = await enrollmentService.updateProgress(
             req.headers['x-user-id'],
+            req.headers['x-user-name'],
             req.body.courseId,
             req.body.lessonId
         );

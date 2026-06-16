@@ -172,7 +172,7 @@ class EnrollmentService{
         }
     }
 
-     async updateProgress(studentId, courseId, lessonId) {
+     async updateProgress(studentId, StudentName,courseId, lessonId) {
         try {
             const enrollment = await this.repo.findOne(studentId, courseId);
             if (!enrollment) throw new Error("Enrollment not found");
@@ -182,14 +182,13 @@ class EnrollmentService{
             if (enrollment.isFullyCompleted()) {
                 enrollment.completed = true;
                 enrollment.completedAt = new Date();
-
-                const { data: course } = await courseClient.get(
-                    `/${courseId}`
-                );
+                const { data: responseBody } = await courseClient.get(`/${courseId}`);
+                const course = responseBody.data;
 
                 await publish("certificate.generate", {
                     studentId,
                     courseId,
+                    studentName:StudentName,
                     courseTitle: course.title,
                     enrollmentId: enrollment._id,
                 });
