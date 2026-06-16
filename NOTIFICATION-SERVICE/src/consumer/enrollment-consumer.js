@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 const start=async ()=>{
-  const conn=amqp.connect(process.env.RABBITMQ_URL);
+  const conn=await amqp.connect(process.env.RABBITMQ_URL);
   const ch=await conn.createChannel();
 
   await ch.assertExchange('dlx', 'direct', { durable: true });
@@ -42,4 +42,32 @@ const start=async ()=>{
          ch.nack(msg, false, false);
      }
    })
-}
+    ch.consume('certificate.generate', async (msg) => {
+        try {
+            const { studentId, courseTitle, enrollmentId } = JSON.parse(
+                msg.content.toString()
+            );
+            console.log(`Processing certificate for student: ${studentId}`);
+
+            const certificateUrl = `https://certs.lms.com/${enrollmentId}.pdf`;
+
+            await sendCertificateEmail(studentId, courseTitle, certificateUrl);
+            console.log(`Certificate email sent for: ${courseTitle}`);
+
+            await enrollmentClient.patch('/api/v1/enrollments/certificate', {
+                enrollmentId,
+                certificateUrl,
+            });
+            console.log(`Certificate URL written back for enrollment: ${enrollmentId}`);
+
+            ch.ack(msg);
+        } catch (e) {
+            console.log("Failed to process certificate.generate", e);
+            ch.nack(msg, false, false);
+        }
+    });
+
+ console.log("Notification consumers running and listening...");
+};
+
+module.exports = { start };

@@ -1,5 +1,5 @@
 const dotenv = require('dotenv');
-const { start } = require('./consumers/enrollment-consumer');
+const {start}=require('./consumer/enrollment-consumer')
 
 dotenv.config();
 

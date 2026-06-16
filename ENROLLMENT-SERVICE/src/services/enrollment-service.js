@@ -14,7 +14,14 @@ const getRabbitChannel = async () => {
 
 const publish = async (queue, data) => {
     const ch = await getRabbitChannel();
-    await ch.assertQueue(queue, { durable: true });
+    await ch.assertQueue(queue, { 
+        durable: true,
+        arguments: {
+            'x-dead-letter-exchange': 'dlx',
+            'x-dead-letter-routing-key': queue, 
+        }
+    });
+    
     ch.sendToQueue(queue, Buffer.from(JSON.stringify(data)));
 };
 

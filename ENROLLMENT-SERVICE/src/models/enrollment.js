@@ -28,9 +28,12 @@ enrollmentSchema.methods.isFullyCompleted = function () {
 };
 
 enrollmentSchema.methods.updateProgress = function (lessonId) {
-    const document=this.progress.find((p)=> p.lessonId=lessonId);
-    if(document && !document.completed){
-      
+    const document = this.progress.find(p => p.lessonId.toString() === lessonId.toString());
+    
+    if (document && !document.completed) {
+        document.completed = true;
+        this.completedLessons += 1;
+        this.progressPercent = Math.round((this.completedLessons / this.totalLessons) * 100);
     }
 }
 
