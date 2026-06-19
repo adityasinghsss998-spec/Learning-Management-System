@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Session Tester</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin: 10px 0; }
+        #presence { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        input { padding: 8px; width: 70%; }
+        button { padding: 8px 16px; margin-left: 5px; }
+        .message { margin: 5px 0; padding: 5px; background: #e8f4f8; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h2>Live Doubt Session Tester</h2>
+
+    <div>
+        <label>Your User ID:</label>
+        <input id="userId" placeholder="e.g. student_001" />
+    </div>
+    <br/>
+    <div>
+        <label>Course Room ID:</label>
+        <input id="roomId" placeholder="e.g. course_abc123" />
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <div id="presence">Online: (not joined yet)</div>
+    <div id="messages"></div>
+
+    <div>
+        <input id="msgInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        const socket = io('http://127.0.0.1:3006');
+        let currentRoom = null;
+        let currentUser = null;
+
+        socket.on('connect', () => {
+            addMessage('System', 'Connected to live-service ✅');
+        });
+
+        socket.on('message', (data) => {
+            addMessage(data.userId, data.message, data.timestamp);
+        });
+
+        socket.on('presence', (members) => {
+            document.getElementById('presence').innerHTML =
+                '🟢 Online (' + members.length + '): ' + members.join(', ');
+        });
+
+        socket.on('disconnect', () => {
+            addMessage('System', 'Disconnected ❌');
+        });
+
+        function joinRoom() {
+            currentUser = document.getElementById('userId').value.trim();
+            currentRoom = document.getElementById('roomId').value.trim();
+            if (!currentUser || !currentRoom) {
+                alert('Enter both User ID and Room ID');
+                return;
+            }
+            socket.emit('join:room', { room: currentRoom, userId: currentUser });
+            addMessage('System', `Joined room: ${currentRoom} as ${currentUser}`);
+        }
+
+        function sendMessage() {
+            const msg = document.getElementById('msgInput').value.trim();
+            if (!msg || !currentRoom) {
+                alert('Join a room first');
+                return;
+            }
+            socket.emit('send:message', {
+                room: currentRoom,
+                message: msg,
+                userId: currentUser,
+            });
+            document.getElementById('msgInput').value = '';
+        }
+
+        function addMessage(from, text, time) {
+            const div = document.getElementById('messages');
+            const ts = time ? new Date(time).toLocaleTimeString() : new Date().toLocaleTimeString();
+            div.innerHTML += `<div class="message"><strong>${from}</strong> [${ts}]: ${text}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        document.getElementById('msgInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
