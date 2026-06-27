@@ -1,11 +1,12 @@
 const router = require('express').Router();
 const controller = require('../../controllers/enrollment-controller');
-console.log("Reached")
+
 router.post('/checkout', controller.checkout);
 router.post('/verify-payment', controller.verifyAndEnroll);
 router.post('/free', controller.enrollFree);
 router.get('/my', controller.getMyEnrollments);
 router.patch('/progress', controller.updateProgress);
-router.patch('/certificate', controller.writeCertificate);
+router.patch('/certificate',controller.writeCertificate);
+
 
 module.exports = router;

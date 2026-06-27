@@ -3,10 +3,10 @@ const enrollmentService = new EnrollmentService();
 
 const checkout = async (req, res) => {
     try {
-        console.log(req.body.id,"-> course id")
+        
         const result = await enrollmentService.checkout(
             req.headers['x-user-id'],
-            req.body.id
+            req.body.courseId
         );
         res.status(200).json(result);
     } catch (e) {
@@ -69,6 +69,7 @@ const updateProgress = async (req, res) => {
 
 const writeCertificate = async (req, res) => {
     try {
+        console.log("reached")
         const result = await enrollmentService.writeCertificate(
             req.body.enrollmentId,
             req.body.certificateUrl

@@ -4,7 +4,7 @@ const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
-const authMiddleware = require('./middlewares/authMiddleware');
+const {authMiddleware} = require('./middleware/auth-middleware')
 
 dotenv.config();
 
@@ -63,9 +63,9 @@ app.use('/api/v1/users', authMiddleware, createProxyMiddleware({
             res.status(503).json({ message: "User service unavailable" });
         },
     },
-}));
+})); 
 
-app.use('/api/v1/courses', authMiddleware, createProxyMiddleware({
+app.use('/api/v1/courses', createProxyMiddleware({
     target: process.env.COURSE_SERVICE_URL,
     changeOrigin: true,
     on: {

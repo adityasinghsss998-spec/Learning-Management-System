@@ -54,7 +54,7 @@ const start=async ()=>{
             await sendCertificateEmail(studentId, courseTitle, certificateUrl);
             console.log(`Certificate email sent for: ${courseTitle}`);
 
-            await enrollmentClient.patch('/api/v1/enrollments/certificate', {
+            await enrollmentClient.patch('/certificate', {
                 enrollmentId,
                 certificateUrl,
             });
