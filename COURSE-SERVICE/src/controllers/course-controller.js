@@ -6,7 +6,11 @@ const createCourse=async(req,res)=>{
   try{
     const userid=req.headers['x-user-id'];
     const username=req.headers['x-user-name'];
-
+     console.log("Headers received:", {
+            userId: req.headers['x-user-id'],
+            userName: req.headers['x-user-name'],
+            userRole: req.headers['x-user-role'],
+        });
     const course=await courseService.create(userid,username,req.body);
     return res.status(200).json({
       data:course,

@@ -45,13 +45,15 @@ class Authservice{
          if(!token) {
           throw new Error ("Token not found hashtag lipgloss!!!...");
          }
-         let decoded = jwt.verify(token, process.env.REFRESH_SECRET);
-         if(!decoded || user.refreshToken!==token) throw new Error ("token is invalid");
-         const user = await this.userrepo.findById(decoded.id);
-         if(!user) throw new Error ("Wrong token provided!!");
+         const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
+         if (!decoded) throw new Error("Token is invalid");
 
-         const accesstoken=user.genAccess();
-         return accesstoken;
+         const user = await this.userrepo.findById(decoded.id);
+         if (!user) throw new Error("Wrong token provided");
+         if (user.refreshToken !== token) throw new Error("Token is invalid");
+
+        const accessToken = user.genAccess();
+        return { accessToken };
       
 
       }catch(e){

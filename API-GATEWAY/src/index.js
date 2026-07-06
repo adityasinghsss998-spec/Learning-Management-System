@@ -4,7 +4,7 @@ const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
-const {authMiddleware} = require('./middleware/auth-middleware')
+const {authMiddleware,optionalAuthMiddleware} = require('./middleware/auth-middleware')
 
 dotenv.config();
 
@@ -65,7 +65,7 @@ app.use('/api/v1/users', authMiddleware, createProxyMiddleware({
     },
 })); 
 
-app.use('/api/v1/courses', createProxyMiddleware({
+app.use('/api/v1/courses', optionalAuthMiddleware, createProxyMiddleware({
     target: process.env.COURSE_SERVICE_URL,
     changeOrigin: true,
     on: {
