@@ -124,7 +124,7 @@ class EnrollmentService{
         try {
             const existing = await this.repo.findOne(studentId, courseId);
             if (existing) throw new Error("Already enrolled in this course");
-            console.log("🕵️ AXIOS IS GOING TO:", courseClient.defaults.baseURL + `/api/v1/courses/${courseId}`)
+           
             const { data: coursedata } = await courseClient.get(
                 `${courseId}`
             );
