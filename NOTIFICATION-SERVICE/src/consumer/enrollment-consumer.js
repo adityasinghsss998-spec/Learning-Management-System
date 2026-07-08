@@ -3,7 +3,7 @@ const { sendEnrollmentEmail, sendCertificateEmail } = require('../config/mailer'
 const { enrollmentClient } = require('../config/axios');
 const { generateCertificate } = require('../config/certificate');
 const dotenv = require('dotenv');
-
+const  {S3} =require('../config/S3');
 dotenv.config();
 
 const start = async () => {
