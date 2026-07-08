@@ -1,6 +1,6 @@
 const PDFDocument = require('pdfkit');
 const { Upload } = require('@aws-sdk/lib-storage');
-const s3 = require('./s3');
+const s3 = require('./S3');
 const dotenv = require('dotenv');
 
 dotenv.config();
