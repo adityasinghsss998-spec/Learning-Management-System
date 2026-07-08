@@ -191,6 +191,7 @@ class EnrollmentService{
                     studentName:StudentName,
                     courseTitle: course.title,
                     enrollmentId: enrollment._id,
+                    completedAt: enrollment.completedAt.toISOString(),
                 });
             }
              await enrollment.save();
