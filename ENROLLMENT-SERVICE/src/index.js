@@ -18,6 +18,14 @@ app.use((req, res, next) => {
 });
 app.use('/', routes);
 const port = process.env.PORT || 3004;
-app.listen(port, () => {
-    console.log("Enrollment Service Running");
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+        app.listen(port, () => {
+            console.log(`Enrollment Service Running on port ${port}`);
+        });
+    } catch (error) {
+        console.error("Failed to initialize server application:", error);
+    }
+};
+startServer();
