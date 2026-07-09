@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(cors({
-    origin: 'https://learning-management-system-frontend-onqn9lfce.vercel.app' || 'http://localhost:5173',
+    origin: 'https://learning-management-system-frontend-wheat.vercel.app' || 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],
     credentials: true,
