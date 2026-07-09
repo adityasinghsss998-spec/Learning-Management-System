@@ -11,11 +11,22 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+const x = [
+    "https://learning-management-system-frontend-wheat.vercel.app",
+    "http://localhost:5173"
+];
+
 app.use(cors({
-    origin: 'https://learning-management-system-frontend-wheat.vercel.app' || 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type'],
-    credentials: true,
+    origin: function (a, b) {
+        if (!a || x.indexOf(a) !== -1 || a.endsWith(".vercel.app")) {
+            b(null, true);
+        } else {
+            b(new Error("CORS"));
+        }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
+    credentials: true
 }));
 
 const globalLimiter = rateLimit({
