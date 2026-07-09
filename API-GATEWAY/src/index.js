@@ -26,7 +26,8 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 20,
+    skipSuccessfulRequests: true,
     message: { message: "Too many auth attempts, please try again later" },
 });
 
@@ -97,6 +98,7 @@ app.use('/api/v1/live', authMiddleware, createProxyMiddleware({
         },
     },
 }));
+
 app.use('/api/v1/ai', authMiddleware, createProxyMiddleware({
     target: process.env.AI_SERVICE_URL,
     changeOrigin: true,
@@ -106,6 +108,7 @@ app.use('/api/v1/ai', authMiddleware, createProxyMiddleware({
         },
     },
 }));
+
 server.on('upgrade', (req, socket, head) => {
     if (req.url.startsWith('/api/v1/live')) {
         const proxy = createProxyMiddleware({

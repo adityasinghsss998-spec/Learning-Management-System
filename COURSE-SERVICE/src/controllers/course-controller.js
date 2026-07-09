@@ -2,6 +2,7 @@ const course = require('../models/course');
 const {CourseService} =require('../services/course-service');
 const courseService=new CourseService();
 const { S3Client } = require('@aws-sdk/client-s3');
+
 const createCourse=async(req,res)=>{
   try{
     const userid=req.headers['x-user-id'];
@@ -44,6 +45,7 @@ const getAllCourses=async(req,res)=>{
 }
 
 const getCourseById = async (req, res) => {
+    console.log("👉 ID BEING REQUESTED:", req.params.id);
     try {
         const result = await courseService.getCourseById(req.params.id);
       return res.status(200).json({
