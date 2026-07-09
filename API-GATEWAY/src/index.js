@@ -15,7 +15,7 @@ app.use(cors({
     origin: 'https://learning-management-system-frontend-wheat.vercel.app' || 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],
-    credentials: true,
+    
 }));
 
 const globalLimiter = rateLimit({
