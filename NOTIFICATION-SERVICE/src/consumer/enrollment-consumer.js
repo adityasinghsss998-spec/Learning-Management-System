@@ -45,10 +45,10 @@ const start = async () => {
 
     ch.consume('enrollment.created', async (msg) => {
         try {
-            const { studentId, courseTitle } = JSON.parse(msg.content.toString());
-            console.log(`Processing enrollment email for student: ${studentId}`);
-            await sendEnrollmentEmail(studentId, courseTitle);
-            console.log(`Enrollment email sent for: ${courseTitle}`);
+            const { studentEmail, courseTitle } = JSON.parse(msg.content.toString());
+            console.log(`Processing enrollment email for: ${studentEmail}`);
+            await sendEnrollmentEmail(studentEmail, courseTitle);
+            console.log(`Enrollment email sent to: ${studentEmail} for: ${courseTitle}`);
             ch.ack(msg);
         } catch (e) {
             console.log('Failed to process enrollment.created', e);
@@ -58,10 +58,10 @@ const start = async () => {
 
     ch.consume('certificate.generate', async (msg) => {
         try {
-            const { studentId, studentName, courseTitle, enrollmentId, completedAt } =
+            const { studentEmail, studentName, courseTitle, enrollmentId, completedAt } =
                 JSON.parse(msg.content.toString());
 
-            console.log(`Generating certificate for student: ${studentName}`);
+            console.log(`Generating certificate for: ${studentName} (${studentEmail})`);
 
             const certificateUrl = await generateCertificate(
                 enrollmentId,
@@ -72,8 +72,8 @@ const start = async () => {
 
             console.log(`Certificate generated and uploaded: ${certificateUrl}`);
 
-            await sendCertificateEmail(studentId, courseTitle, certificateUrl);
-            console.log(`Certificate email sent for: ${courseTitle}`);
+            await sendCertificateEmail(studentEmail, studentName, courseTitle, certificateUrl);
+            console.log(`Certificate email sent to: ${studentEmail}`);
 
             await enrollmentClient.patch('/certificate', {
                 enrollmentId,
