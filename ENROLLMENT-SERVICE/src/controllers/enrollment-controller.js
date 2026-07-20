@@ -3,7 +3,6 @@ const enrollmentService = new EnrollmentService();
 
 const checkout = async (req, res) => {
     try {
-        
         const result = await enrollmentService.checkout(
             req.headers['x-user-id'],
             req.body.courseId
@@ -19,6 +18,7 @@ const verifyAndEnroll = async (req, res) => {
         const { courseId, orderId, paymentId, signature } = req.body;
         const result = await enrollmentService.verifyAndEnroll(
             req.headers['x-user-id'],
+            req.headers['x-user-email'],
             courseId,
             orderId,
             paymentId,
@@ -34,6 +34,7 @@ const enrollFree = async (req, res) => {
     try {
         const result = await enrollmentService.enrollFree(
             req.headers['x-user-id'],
+            req.headers['x-user-email'],
             req.body.courseId
         );
         res.status(201).json(result);
@@ -58,6 +59,7 @@ const updateProgress = async (req, res) => {
         const result = await enrollmentService.updateProgress(
             req.headers['x-user-id'],
             req.headers['x-user-name'],
+            req.headers['x-user-email'],
             req.body.courseId,
             req.body.lessonId
         );
@@ -69,7 +71,7 @@ const updateProgress = async (req, res) => {
 
 const writeCertificate = async (req, res) => {
     try {
-        console.log("reached")
+        console.log("reached");
         const result = await enrollmentService.writeCertificate(
             req.body.enrollmentId,
             req.body.certificateUrl

@@ -5,6 +5,7 @@ const razorpay = require('../config/razorpay');
 const dotenv = require('dotenv');
 let channel;
 const amqp = require('amqplib');
+
 const getRabbitChannel = async () => {
     if (channel) return channel;
     const conn = await amqp.connect(process.env.RABBITMQ_URL);
@@ -14,50 +15,45 @@ const getRabbitChannel = async () => {
 
 const publish = async (queue, data) => {
     const ch = await getRabbitChannel();
-    await ch.assertQueue(queue, { 
+    await ch.assertQueue(queue, {
         durable: true,
         arguments: {
             'x-dead-letter-exchange': 'dlx',
-            'x-dead-letter-routing-key': queue, 
+            'x-dead-letter-routing-key': queue,
         }
     });
-    
     ch.sendToQueue(queue, Buffer.from(JSON.stringify(data)));
 };
 
-class EnrollmentService{
-    constructor(){
-      this.repo=new Enrollmentrepository();
+class EnrollmentService {
+    constructor() {
+        this.repo = new Enrollmentrepository();
     }
-   
-    async checkout(studentId,CourseId){
-      try{
-        const student=await this.repo.findOne(studentId,CourseId);
-        console.log(student)
-        if(student){
-          throw new Error ("Aleady enrolled in this course")
-        }
-       const { data: responseBody } = await courseClient.get(`/${CourseId}`);
-        const course = responseBody.data;
-        if(!course) throw new Error("course does not exist");
-        if(course.price==0){
-          return {
-            free:true,
-            CourseId,
-            price:0
-          }
-        }
 
-        const shortStudent = studentId.toString().slice(-8);
-        const shortCourse = CourseId.toString().slice(-8);
+    async checkout(studentId, CourseId) {
+        try {
+            const student = await this.repo.findOne(studentId, CourseId);
+            console.log(student);
+            if (student) {
+                throw new Error("Already enrolled in this course");
+            }
+            const { data: responseBody } = await courseClient.get(`/${CourseId}`);
+            const course = responseBody.data;
+            if (!course) throw new Error("course does not exist");
+            if (course.price == 0) {
+                return { free: true, CourseId, price: 0 };
+            }
 
-        const order=await razorpay.orders.create({
-           amount: course.price * 100,
-           currency: "INR",
-           receipt: `receipt_${shortStudent}_${shortCourse}`,
-        })
+            const shortStudent = studentId.toString().slice(-8);
+            const shortCourse = CourseId.toString().slice(-8);
 
-         return {
+            const order = await razorpay.orders.create({
+                amount: course.price * 100,
+                currency: "INR",
+                receipt: `receipt_${shortStudent}_${shortCourse}`,
+            });
+
+            return {
                 free: false,
                 orderId: order.id,
                 amount: course.price,
@@ -65,26 +61,26 @@ class EnrollmentService{
                 courseTitle: course.title,
                 keyId: process.env.RAZORPAY_KEY_ID,
             };
-          }catch (e) {
+        } catch (e) {
             console.log("Something went wrong at the service layer", e);
             throw e;
         }
     }
 
-    async verifyAndEnroll(studentId, courseId, orderId, paymentId, signature) {
-      try{
-          const body = orderId+"|"+paymentId;
-          const expected = crypto
+    async verifyAndEnroll(studentId, studentEmail, courseId, orderId, paymentId, signature) {
+        try {
+            const body = orderId + "|" + paymentId;
+            const expected = crypto
                 .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
                 .update(body)
                 .digest("hex");
-          
 
-           console.log("--- SECURITY CHECK ---");
-  
-          if (expected!==signature) throw new Error("Payment verification failed");
-          const { data: responseBody } = await courseClient.get(`/${courseId}`);
-          const course = responseBody.data;
+            console.log("--- SECURITY CHECK ---");
+
+            if (expected !== signature) throw new Error("Payment verification failed");
+
+            const { data: responseBody } = await courseClient.get(`/${courseId}`);
+            const course = responseBody.data;
 
             const allLessons = course.sections.flatMap((s) =>
                 s.lessons.map((l) => ({
@@ -106,30 +102,30 @@ class EnrollmentService{
                 },
             });
 
-          await courseClient.patch(`/${courseId}/students/increment`);
-          await publish("enrollment.created", {
+            await courseClient.patch(`/${courseId}/students/increment`);
+
+            await publish("enrollment.created", {
                 studentId,
+                studentEmail,
                 courseId,
                 courseTitle: course.title,
             });
 
             return enrollment;
-      }catch (e) {
+        } catch (e) {
             console.log("Something went wrong at the service layer", e);
             throw e;
         }
     }
 
-     async enrollFree(studentId, courseId) {
+    async enrollFree(studentId, studentEmail, courseId) {
         try {
             const existing = await this.repo.findOne(studentId, courseId);
             if (existing) throw new Error("Already enrolled in this course");
-           
-            const { data: coursedata } = await courseClient.get(
-                `${courseId}`
-            );
-            const course=coursedata.data;
-            console.log(course)
+
+            const { data: coursedata } = await courseClient.get(`${courseId}`);
+            const course = coursedata.data;
+            console.log(course);
             if (!course) throw new Error("Course not found");
             if (course.price !== 0) throw new Error("This is a paid course");
 
@@ -152,16 +148,17 @@ class EnrollmentService{
 
             await publish("enrollment.created", {
                 studentId,
+                studentEmail,
                 courseId,
                 courseTitle: course.title,
             });
 
             return enrollment;
-          }catch (e) {
+        } catch (e) {
             console.log("Something went wrong at the service layer", e);
             throw e;
         }
- }
+    }
 
     async getMyEnrollments(studentId) {
         try {
@@ -172,7 +169,7 @@ class EnrollmentService{
         }
     }
 
-     async updateProgress(studentId, StudentName,courseId, lessonId) {
+    async updateProgress(studentId, studentName, studentEmail, courseId, lessonId) {
         try {
             const enrollment = await this.repo.findOne(studentId, courseId);
             if (!enrollment) throw new Error("Enrollment not found");
@@ -182,27 +179,30 @@ class EnrollmentService{
             if (enrollment.isFullyCompleted()) {
                 enrollment.completed = true;
                 enrollment.completedAt = new Date();
+
                 const { data: responseBody } = await courseClient.get(`/${courseId}`);
                 const course = responseBody.data;
 
                 await publish("certificate.generate", {
                     studentId,
+                    studentName,
+                    studentEmail,
                     courseId,
-                    studentName:StudentName,
                     courseTitle: course.title,
                     enrollmentId: enrollment._id,
                     completedAt: enrollment.completedAt.toISOString(),
                 });
             }
-             await enrollment.save();
+
+            await enrollment.save();
             return enrollment;
         } catch (e) {
             console.log("Something went wrong at the service layer", e);
             throw e;
         }
-}
+    }
 
-     async writeCertificate(enrollmentId, certificateUrl) {
+    async writeCertificate(enrollmentId, certificateUrl) {
         try {
             const enrollment = await this.repo.findById(enrollmentId);
             if (!enrollment) throw new Error("Enrollment not found");
@@ -213,4 +213,5 @@ class EnrollmentService{
         }
     }
 }
+
 module.exports = { EnrollmentService };
