@@ -1,34 +1,29 @@
-> 🚧 **Currently under active development** — Backend microservices are being built service by service. Frontend and AI integration coming soon.
+<div align="center">
+
+<img src="https://img.shields.io/badge/Status-Live%20%26%20Deployed-brightgreen?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Architecture-Microservices-4f46e5?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Services-7%20Independent-0d9488?style=for-the-badge" />
+
+# Nexus — Full Stack Learning Management System
+
+**A production-grade LMS built from scratch on a polyrepo microservices architecture.**  
+Seven independent services. Real-time doubt sessions. AI-powered features. AWS S3 media pipeline. Razorpay payments.
+
+[**Live Demo →**](https://nexus-lms.vercel.app) &nbsp;·&nbsp; [**Backend API**](https://nexus-api.onrender.com/health) &nbsp;·&nbsp; [**Frontend Repo**](https://github.com/yourusername/nexus-frontend)
+
+</div>
 
 ---
 
-# LMS Platform — Full Stack Learning Management System
-
-A production-grade, full-stack Learning Management System built from scratch using a **Polyrepo Microservices Architecture**. Every service is completely isolated, runs on its own port, and connects to its own database. The system uses a mix of synchronous HTTP, asynchronous event-driven messaging, and real-time WebSocket communication.
+> 🚧 **Actively maintained** — AI features, certificate generation, and deployment completed. Next: advanced RAG pipeline and vector search.
 
 ---
 
-## Table of Contents
+## What is Nexus?
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Services](#services)
-- [Tech Stack](#tech-stack)
-- [Communication Patterns](#communication-patterns)
-- [Getting Started](#getting-started)
-- [API Reference](#api-reference)
-- [Payment Flow](#payment-flow)
-- [Real-Time Features](#real-time-features)
-- [Future Plans](#future-plans)
-- [Project Status](#project-status)
+Nexus is a full-stack Learning Management System where **instructors** create and publish courses with structured sections and video/PDF lessons uploaded directly to AWS S3, and **students** discover, enroll, track progress, join live doubt sessions, and earn real PDF certificates — all through a single API gateway entry point.
 
----
-
-## Overview
-
-This platform allows **instructors** to create and publish courses with structured sections and lessons, upload video and PDF content directly to AWS S3, and manage their course catalog. **Students** can browse the catalog, enroll in free or paid courses, track their progress lesson by lesson, participate in live doubt sessions, and receive certificates on completion — all through a single API gateway entry point.
-
-The project is being built with a focus on real-world engineering patterns — not just making things work, but making them work the right way at scale.
+Built to mirror how real production systems are architected at scale — not a tutorial clone, but a ground-up engineering project with deliberate architectural decisions at every layer.
 
 ---
 
@@ -38,39 +33,36 @@ The project is being built with a focus on real-world engineering patterns — n
 Client (React + Vite)
         │
         ▼
-┌─────────────────────┐
-│     API Gateway     │  ← Single entry point (Port 3000)
-│  JWT Auth + Proxy   │  ← Rate limiting, centralized auth
-│  + Rate Limiting    │
-└──────────┬──────────┘
+┌─────────────────────────┐
+│      API Gateway        │  ← Port 3000 — single entry point
+│  JWT Auth · Rate Limit  │  ← Centralized auth, request routing
+│  CORS · Proxy           │
+└──────────┬──────────────┘
            │
-    ┌──────┼────────────────────────────┐
-    │      │                            │
-    ▼      ▼                            ▼
-auth   user-service            course-service
-service   (3002)                   (3003)
-(3001)  MongoDB                  MongoDB + S3
+    ┌──────┼──────────────────────────────────┐
+    │      │                                  │
+    ▼      ▼                                  ▼
+auth    user-service              course-service
+service    (3002)                     (3003)
+(3001)   MongoDB                   MongoDB + S3
 MongoDB
-           │                            │
-           │         ┌──────────────────┘
-           │         │
-           ▼         ▼
-    enrollment-service (3004)
-         MongoDB + Razorpay
+                    │
+           ┌────────┴─────────┐
+           │                  │
+           ▼                  ▼
+  enrollment-service      ai-service
+      (3004)                (3007)
+   MongoDB + Razorpay      Gemini API
            │
-    ┌──────┴──────────┐
-    │                 │
-    ▼                 ▼
-RabbitMQ          course-service
-(async events)    (Axios HTTP)
+    ┌──────┴──────┐
+    │             │
+    ▼             ▼
+RabbitMQ    course-service
+(async)     (Axios HTTP)
     │
     ▼
-notification-service (3005)
-    Nodemailer + DLQ
-           │
-           ▼
-    enrollment-service
-    (certificate writeback)
+notification-service
+  pdfkit + S3 + SMTP
 
 live-service (3006)
 Socket.io + Redis Pub/Sub
@@ -80,26 +72,16 @@ Socket.io + Redis Pub/Sub
 
 ## Services
 
-### `api-gateway` — Port 3000
-Single entry point for all client requests. Verifies JWT tokens centrally and injects user identity headers (`x-user-id`, `x-user-role`, `x-user-name`, `x-user-email`) into every proxied request. Applies global and auth-specific rate limiting. No business logic lives here.
-
-### `auth-service` — Port 3001
-The only service that handles passwords and token issuance. Implements a full access + refresh token flow. Access tokens expire in 15 minutes, refresh tokens in 7 days and are stored hashed in the database. Provides register, login, refresh, and logout endpoints.
-
-### `user-service` — Port 3002
-Manages student and instructor profiles independently from auth. Handles bio, avatar (uploaded to S3), and social links. Profiles are auto-created on first access — no separate onboarding step required.
-
-### `course-service` — Port 3003
-The content backbone of the platform. Instructors create courses with a two-level hierarchy — Sections contain Lessons. Lesson content (video, PDF) is streamed directly to AWS S3 via `multer-s3`. Supports full-text search via MongoDB text indexes, filtering by category, level, and price range, and sorting by newest or popularity. Every mutation is protected by an instructor ownership guard.
-
-### `enrollment-service` — Port 3004
-The most interconnected service. Handles the full student-course lifecycle — checkout, payment verification via Razorpay, enrollment, lesson-by-lesson progress tracking, and course completion detection. Uses Axios to communicate synchronously with `course-service` and RabbitMQ to fire async events to `notification-service`.
-
-### `notification-service` — Port 3005
-A pure RabbitMQ consumer with no HTTP server, no database, and no routes. Listens on two queues — `enrollment.created` for welcome emails and `certificate.generate` for completion emails. Failed messages are routed to Dead Letter Queues instead of being lost. On certificate generation it writes the certificate URL back to `enrollment-service` via Axios.
-
-### `live-service` — Port 3006
-Real-time bidirectional communication for live doubt sessions between students and instructors. Uses Socket.io with Redis Pub/Sub as the message broker so the system scales horizontally across multiple instances. Tracks room presence — who is online in each session — using Redis Sets.
+| Service | Port | Database | Responsibility |
+|---|---|---|---|
+| `api-gateway` | 3000 | — | JWT verification, reverse proxy, rate limiting |
+| `auth-service` | 3001 | MongoDB | Register, login, access + refresh token lifecycle |
+| `user-service` | 3002 | MongoDB | Profiles, avatar upload to S3 |
+| `course-service` | 3003 | MongoDB + S3 | Course CRUD, sections, lessons, S3 media upload |
+| `enrollment-service` | 3004 | MongoDB | Enrollment, Razorpay payments, progress tracking |
+| `notification-service` | 3005 | — | RabbitMQ consumer, email, PDF certificate generation |
+| `live-service` | 3006 | Redis | Socket.io doubt sessions, Redis presence tracking |
+| `ai-service` | 3007 | — | Gemini AI — course descriptions, summaries, suggestions |
 
 ---
 
@@ -109,306 +91,304 @@ Real-time bidirectional communication for live doubt sessions between students a
 | Technology | Purpose |
 |---|---|
 | Node.js + Express | HTTP server for each microservice |
-| MongoDB + Mongoose | Primary database with schema validation and document methods |
-| Redis + ioredis | Real-time pub/sub and presence tracking in live-service |
+| MongoDB + Mongoose | Primary database — schema validation, document methods |
+| Redis + ioredis | Real-time pub/sub and presence tracking |
 | RabbitMQ + amqplib | Async event-driven communication between services |
 | Socket.io | Real-time bidirectional WebSocket communication |
-| Axios | Synchronous HTTP communication between services |
-| JWT (jsonwebtoken) | Stateless authentication via access + refresh token pair |
+| Axios | Synchronous HTTP between services |
+| JWT (jsonwebtoken) | Stateless auth — access (15min) + refresh (7d) token pair |
 | bcrypt | Password hashing |
-| AWS S3 + @aws-sdk/client-s3 | Cloud storage for course content and avatars |
+| AWS S3 + @aws-sdk/client-s3 | Cloud storage for videos, PDFs, avatars, certificates |
 | multer + multer-s3 | Multipart file upload streamed directly to S3 |
 | Razorpay | Payment processing with HMAC-SHA256 signature verification |
+| pdfkit | Real PDF certificate generation |
 | nodemailer | Transactional email via SMTP |
-| express-rate-limit | API rate limiting at the gateway layer |
-| dotenv | Environment variable management |
-| nodemon | Development auto-restart |
+| @google/generative-ai | Gemini 1.5 Flash AI integration |
+| express-rate-limit | Tiered rate limiting at the gateway layer |
 
-### Frontend (In Progress)
+### Frontend
 | Technology | Purpose |
 |---|---|
-| React + Vite | Frontend framework and build tool |
-| Axios | HTTP client communicating with api-gateway |
-| React Query | Server state management and caching |
-| React Router | Client-side routing |
+| React + Vite | UI framework and build tool |
+| Tailwind CSS | Utility-first styling |
+| Framer Motion | Animations — hero canvas, staggered cards |
+| Axios + interceptors | HTTP client with JWT auto-attach and silent token refresh |
+| React Query | Server state — caching, background refetch, optimistic updates |
+| React Router | Client-side routing with protected and role-based routes |
 | Socket.io-client | Real-time connection to live-service |
-| Razorpay JS SDK | Payment modal integration |
+| Razorpay JS SDK | Payment modal, loaded on-demand |
 
 ---
 
 ## Communication Patterns
 
-This project deliberately uses three different communication patterns depending on the use case:
+Three deliberate communication patterns, each chosen for a specific reason:
 
 ### Synchronous HTTP (Axios)
-Used when a service needs an immediate response before it can continue.
+Used when a service needs an immediate response before continuing.
 
 ```
-enrollment-service ──── GET /api/v1/courses/:id ────► course-service
-                    ◄─── course data ─────────────────
-(needs lesson list to initialize progress tracking)
-
-notification-service ── PATCH /api/v1/enrollments/certificate ──► enrollment-service
-(writes certificate URL back after generation)
+enrollment-service ──► GET /courses/:id ──► course-service
+                    ◄── course data ─────────────────────
+(validates course exists, initializes progress array)
 ```
 
 ### Asynchronous Messaging (RabbitMQ)
-Used for side effects that can happen in the background without blocking the main flow.
+Used for background tasks that should not block the user.
 
 ```
 enrollment-service ──► enrollment.created ──► notification-service (welcome email)
-enrollment-service ──► certificate.generate ──► notification-service (cert email)
+enrollment-service ──► certificate.generate ──► notification-service (PDF + email)
 ```
 
-### Real-Time Bidirectional (Socket.io)
-Used for live features where both client and server need to push data to each other.
+Dead Letter Queues (DLQ) ensure failed messages are never silently lost.
+
+### Real-Time Bidirectional (Socket.io + Redis)
+Used for live features where both sides push data.
 
 ```
-student/instructor ◄──► live-service ◄──► Redis Pub/Sub ◄──► live-service instances
-(join room, send message, receive message, see presence)
+student ◄──► live-service ◄──► Redis Pub/Sub ◄──► live-service instance 2
+(join room, send message, receive message, presence tracking)
 ```
+
+Redis Pub/Sub enables horizontal scaling — multiple `live-service` instances stay in sync.
 
 ---
 
-## Getting Started
+## Key Features
+
+### For Students
+- Browse searchable course catalog (full-text search, category + level + price filters)
+- Enroll in free courses instantly or pay via Razorpay for paid courses
+- Watch video lessons or read PDF content directly in the browser
+- Track lesson-by-lesson progress with auto-calculated completion percentage
+- Join live doubt sessions with real-time chat and presence indicators
+- Receive auto-generated PDF certificate on course completion
+- AI-powered personalized course suggestions on the dashboard
+
+### For Instructors
+- Create courses with two-level content hierarchy (Sections → Lessons)
+- Upload video/PDF lesson content directly to AWS S3 via multipart streaming
+- AI-generated course descriptions from title + topics (Gemini)
+- Publish/unpublish courses — draft until ready
+- Per-lesson upload progress bar with real S3 streaming
+
+### Platform
+- Centralized JWT verification at the gateway — downstream services never see raw tokens
+- Refresh token rotation — silent re-authentication without user interruption
+- Tiered rate limiting — global + stricter limits on auth endpoints
+- Role-based access control — student vs instructor routes enforced at both gateway and service layers
+- Dead Letter Queues — failed background jobs are never silently lost
+- Real PDF certificate generation with pdfkit, uploaded to S3, emailed to student
+
+---
+
+## Getting Started Locally
 
 ### Prerequisites
 - Node.js v18+
-- MongoDB running locally or MongoDB Atlas
-- RabbitMQ running locally (default port 5672)
-- Redis running locally (default port 6379)
+- MongoDB (local or Atlas)
+- RabbitMQ (local — dashboard at `http://localhost:15672`)
+- Redis (local)
 - AWS S3 bucket with credentials
 - Razorpay test account
-- Gmail account with App Password for SMTP
+- Google AI Studio API key (for ai-service)
+- Gmail account with App Password (for notification-service)
 
-### Clone and Setup
-
-```bash
-git clone https://github.com/yourusername/lms-backend.git
-cd lms-backend
-```
-
-Install dependencies for each service individually:
+### Clone and Install
 
 ```bash
-cd auth-service && npm install
-cd ../user-service && npm install
-cd ../course-service && npm install
-cd ../enrollment-service && npm install
-cd ../notification-service && npm install
-cd ../live-service && npm install
-cd ../api-gateway && npm install
+git clone https://github.com/yourusername/nexus-lms.git
+cd nexus-lms
+
+# Install dependencies for each service
+for service in api-gateway auth-service user-service course-service enrollment-service notification-service live-service ai-service; do
+  cd $service && npm install && cd ..
+done
+
+# Install frontend
+cd nexus-frontend && npm install
 ```
 
 ### Environment Variables
 
-Each service has its own `.env` file. Copy the `.env.example` from each service folder and fill in your values.
+Each service has its own `.env` file. Key variables:
 
-Key variables:
-
-```
+```env
 # api-gateway
+PORT=3000
 ACCESS_SECRET=your_jwt_access_secret
 AUTH_SERVICE_URL=http://localhost:3001
 USER_SERVICE_URL=http://localhost:3002
 COURSE_SERVICE_URL=http://localhost:3003
 ENROLLMENT_SERVICE_URL=http://localhost:3004
 LIVE_SERVICE_URL=http://localhost:3006
+AI_SERVICE_URL=http://localhost:3007
+CLIENT_URL=http://localhost:5173
+NODE_ENV=development
 
 # auth-service
+PORT=3001
+MONGO_URI=mongodb://localhost:27017/lms_auth
 ACCESS_SECRET=your_jwt_access_secret
 REFRESH_SECRET=your_jwt_refresh_secret
-MONGO_URI=mongodb://localhost:27017/lms_auth
 
 # course-service
+PORT=3003
+MONGO_URI=mongodb://localhost:27017/lms_courses
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 AWS_REGION=ap-south-1
-S3_BUCKET=your_bucket
+S3_BUCKET=your_bucket_name
 
 # enrollment-service
+PORT=3004
+MONGO_URI=mongodb://localhost:27017/lms_enrollments
+COURSE_SERVICE_URL=http://localhost:3003
+RABBITMQ_URL=amqp://localhost
 RAZORPAY_KEY_ID=rzp_test_...
 RAZORPAY_KEY_SECRET=your_secret
 
 # notification-service
+RABBITMQ_URL=amqp://localhost
+ENROLLMENT_SERVICE_URL=http://localhost:3004
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
+SMTP_PASS=your_gmail_app_password
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_REGION=ap-south-1
+S3_BUCKET=your_bucket_name
+CLIENT_URL=http://localhost:5173
+
+# live-service
+PORT=3006
+REDIS_URL=redis://localhost:6379
+
+# ai-service
+PORT=3007
+GEMINI_API_KEY=your_gemini_api_key
+
+# nexus-frontend
+VITE_API_URL=http://localhost:3000/api/v1
 ```
 
 ### Run All Services
 
-Open a separate terminal for each service:
+Open a separate terminal for each:
 
 ```bash
-# Terminal 1
-cd api-gateway && npm run dev
-
-# Terminal 2
-cd auth-service && npm run dev
-
-# Terminal 3
-cd user-service && npm run dev
-
-# Terminal 4
-cd course-service && npm run dev
-
-# Terminal 5
-cd enrollment-service && npm run dev
-
-# Terminal 6
-cd notification-service && npm run dev
-
-# Terminal 7
-cd live-service && npm run dev
+cd api-gateway && npm run dev          # Terminal 1
+cd auth-service && npm run dev         # Terminal 2
+cd user-service && npm run dev         # Terminal 3
+cd course-service && npm run dev       # Terminal 4
+cd enrollment-service && npm run dev   # Terminal 5
+cd notification-service && npm run dev # Terminal 6
+cd live-service && npm run dev         # Terminal 7
+cd ai-service && npm run dev           # Terminal 8
+cd nexus-frontend && npm run dev       # Terminal 9
 ```
 
-All traffic goes through the gateway on **port 3000**.
+Frontend: `http://localhost:5173`  
+API Gateway: `http://localhost:3000`  
+RabbitMQ Dashboard: `http://localhost:15672`
 
 ---
 
 ## API Reference
 
-All requests go through `http://localhost:3000`. Protected routes require `Authorization: Bearer <token>` header.
+All requests go through `http://localhost:3000`. Protected routes require `Authorization: Bearer <token>`.
 
 ### Auth
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | POST | `/api/v1/auth/register` | No | Register student or instructor |
-| POST | `/api/v1/auth/login` | No | Login and receive tokens |
-| POST | `/api/v1/auth/refresh` | No | Refresh access token |
+| POST | `/api/v1/auth/login` | No | Login, receive access + refresh tokens |
+| POST | `/api/v1/auth/refresh` | No | Silently refresh access token |
 | POST | `/api/v1/auth/logout` | No | Invalidate refresh token |
-
-### Users
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/users/profile` | Yes | Get or auto-create profile |
-| PATCH | `/api/v1/users/profile` | Yes | Update bio and social links |
-| PATCH | `/api/v1/users/avatar` | Yes | Upload avatar to S3 |
 
 ### Courses
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/api/v1/courses` | Yes | Browse catalog with search and filters |
-| GET | `/api/v1/courses/my` | Yes | Get instructor's own courses |
-| GET | `/api/v1/courses/:id` | Yes | Get full course with sections and lessons |
-| POST | `/api/v1/courses` | Yes | Create a new course |
-| PATCH | `/api/v1/courses/:id` | Yes | Update course details |
-| PATCH | `/api/v1/courses/:id/thumbnail` | Yes | Upload course thumbnail to S3 |
-| PATCH | `/api/v1/courses/:id/publish` | Yes | Toggle publish/unpublish |
-| DELETE | `/api/v1/courses/:id` | Yes | Delete course |
-| POST | `/api/v1/courses/:id/sections` | Yes | Add a section |
-| POST | `/api/v1/courses/:courseId/sections/:sectionId/lessons` | Yes | Upload a lesson |
+| GET | `/api/v1/courses` | Optional | Browse catalog with search and filters |
+| GET | `/api/v1/courses/my` | Yes | Instructor's own courses |
+| GET | `/api/v1/courses/:id` | Optional | Full course with sections and lessons |
+| POST | `/api/v1/courses` | Yes (instructor) | Create a new course |
+| PATCH | `/api/v1/courses/:id/publish` | Yes (instructor) | Toggle publish/unpublish |
+| POST | `/api/v1/courses/:id/sections` | Yes (instructor) | Add a section |
+| POST | `/api/v1/courses/:courseId/sections/:sectionId/lessons` | Yes (instructor) | Upload a lesson to S3 |
 
 ### Enrollments
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | POST | `/api/v1/enrollments/checkout` | Yes | Create Razorpay order for paid course |
-| POST | `/api/v1/enrollments/verify-payment` | Yes | Verify payment and enroll |
-| POST | `/api/v1/enrollments/free` | Yes | Enroll in free course directly |
+| POST | `/api/v1/enrollments/verify-payment` | Yes | Verify payment signature and enroll |
+| POST | `/api/v1/enrollments/free` | Yes | Enroll in free course |
 | GET | `/api/v1/enrollments/my` | Yes | Get all student enrollments |
 | PATCH | `/api/v1/enrollments/progress` | Yes | Mark a lesson complete |
-| PATCH | `/api/v1/enrollments/certificate` | Internal | Write certificate URL back |
+
+### AI
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/ai/describe` | Yes | Generate course description from title |
+| POST | `/api/v1/ai/summarize` | Yes | Summarize lesson content |
+| POST | `/api/v1/ai/suggest` | Yes | Personalized course suggestions |
 
 ---
 
-## Payment Flow
+## Deployment
 
-```
-1. Student hits /checkout → gets Razorpay orderId
-2. Frontend opens Razorpay modal → student pays
-3. Razorpay returns paymentId + signature
-4. Student hits /verify-payment with all three values
-5. Server recomputes HMAC-SHA256 signature → verifies
-6. Enrollment created with payment record
-7. Welcome email sent via RabbitMQ → notification-service
-```
-
----
-
-## Real-Time Features
-
-Live doubt sessions use Socket.io with Redis Pub/Sub:
-
-```javascript
-// Client connects and joins a course room
-socket.emit("join:room", { room: courseId, userId });
-
-// Client sends a message
-socket.emit("send:message", { room: courseId, message, userId });
-
-// Client listens for messages
-socket.on("message", (data) => console.log(data));
-
-// Client receives live presence updates
-socket.on("presence", (members) => console.log("Online:", members));
-```
-
----
-
-## Future Plans
-
-### Immediate (In Progress)
-- [ ] `live-service` — Socket.io doubt sessions with Redis presence tracking
-- [ ] React frontend with Vite — connecting all services
-- [ ] Razorpay webhook for server-side payment confirmation
-- [ ] JWT refresh token rotation on the frontend
-
-### Short Term
-- [ ] `ai-service` — Gemini API integration
-  - Auto-generate course descriptions from title and topics
-  - Lesson content summarizer stored alongside each lesson
-  - Personalized learning path suggestions for students
-  - Real-time AI doubt assistant in live sessions
-- [ ] Jest unit and integration tests across all services
-- [ ] Input validation with Joi or Zod across all endpoints
-- [ ] Pagination on course catalog and enrollment lists
-
-### Medium Term
-- [ ] Full cloud deployment — Render for services, MongoDB Atlas, Redis Cloud, CloudAMQP
-- [ ] Docker Compose for local development across all services
-- [ ] CI/CD pipeline with GitHub Actions
-- [ ] S3 pre-signed URLs for secure content delivery
-- [ ] Course reviews and ratings service
-- [ ] Instructor analytics dashboard — revenue, student progress, completion rates
-
-### Long Term — Project 2
-A more complex platform that extends these foundations with:
-- [ ] Vector database integration (Pinecone) for semantic search
-- [ ] RAG pipeline — AI that answers questions using course content as context
-- [ ] Agentic AI flows — autonomous course recommendation agent
-- [ ] Gemini function calling for structured AI tool use
-- [ ] ElasticSearch for full-text search at scale
-- [ ] WebRTC for peer-to-peer video in live sessions
-- [ ] Kubernetes deployment with horizontal scaling
+| Service | Platform |
+|---|---|
+| 8 backend services | Render (Web Services) |
+| MongoDB | MongoDB Atlas (M0 free tier) |
+| Redis | Redis Cloud (free tier) |
+| RabbitMQ | CloudAMQP (Little Lemur free tier) |
+| Frontend | Vercel |
+| Media storage | AWS S3 |
 
 ---
 
 ## Project Status
 
-| Service | Status | Notes |
-|---|---|---|
-| `api-gateway` | ✅ Complete | JWT auth, rate limiting, proxy |
-| `auth-service` | ✅ Complete | Register, login, refresh, logout |
-| `user-service` | ✅ Complete | Profiles, avatar upload to S3 |
-| `course-service` | ✅ Complete | CRUD, sections, lessons, S3, search |
-| `enrollment-service` | ✅ Complete | Progress tracking, Razorpay payments |
-| `notification-service` | ✅ Complete | RabbitMQ consumers, DLQ, emails |
-| `live-service` | 🔄 In Progress | Socket.io + Redis |
-| `ai-service` | 📋 Planned | Gemini integration |
-| React Frontend | 📋 Planned | Vite + React Query + Socket.io-client |
+| Component | Status |
+|---|---|
+| `api-gateway` | ✅ Deployed |
+| `auth-service` | ✅ Deployed |
+| `user-service` | ✅ Deployed |
+| `course-service` | ✅ Deployed |
+| `enrollment-service` | ✅ Deployed |
+| `notification-service` | ✅ Deployed |
+| `live-service` | ✅ Deployed |
+| `ai-service` | ✅ Deployed |
+| React frontend | ✅ Deployed |
+| PDF certificate generation | ✅ Complete |
+| Razorpay payments | ✅ Complete |
+| Gemini AI integration | ✅ Complete |
+
+### Planned
+- [ ] Vector database (Pinecone) for semantic course search
+- [ ] RAG pipeline — AI answers questions using course content as context
+- [ ] Jest integration tests across all services
+- [ ] Docker Compose for single-command local setup
+- [ ] CI/CD pipeline with GitHub Actions
 
 ---
 
 ## Author
 
-**Aditya Kumar**
-CSE Undergraduate — IIIT Ranchi (2028)
-Competitive Programming Coordinator — IIIT Ranchi
-ATF 2025 National Finalist — Top 0.1% of 250,000+ applicants
+**Aditya Kumar**  
+B.Tech CSE — IIIT Ranchi (2028) · CGPA 9.09  
+Competitive Programming Coordinator — mentoring 50+ students in DSA  
+ATF 2025 National Finalist — Top 0.1% of 250,000+ applicants  
+CodeChef 3★ (max 1621) · Codeforces Specialist · 500+ problems solved
 
-- GitHub: [@yourusername](https://github.com/adityasinghsss998-spec)
-- LinkedIn: [linkedin.com/in/yourprofile](https://www.linkedin.com/in/aditya-kumar-419b29369/)
+[![GitHub](https://img.shields.io/badge/GitHub-yourusername-181717?style=flat&logo=github)](https://github.com/yourusername)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-adityakumar-0077B5?style=flat&logo=linkedin)](https://linkedin.com/in/yourprofile)
 
 ---
 
-> This project is being built in public, one microservice at a time, with a focus on understanding every architectural decision rather than just shipping code.
+<div align="center">
+<sub>Built piece by piece, one microservice at a time. Every architectural decision has a reason.</sub>
+</div>
